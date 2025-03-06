@@ -1,4 +1,3 @@
-from collections import Counter
 from datetime import datetime
 import os
 from openai import OpenAI
@@ -32,7 +31,6 @@ for idx, message in enumerate(st.session_state.messages):
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
-# 사용자 입력 처리
 if prompt := st.chat_input("What is up?"):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
@@ -48,36 +46,22 @@ if prompt := st.chat_input("What is up?"):
 
     st.session_state.messages.append({"role": "assistant", "content": response})  # type: ignore
 
+    # 채팅 내용을 파일로 저장하는 함수 실행
+    def save_chat_to_file():
+        today_date = datetime.now().strftime("%Y-%m-%d")
+        filename = f"{today_date}_chatlog.txt"
+        with open(filename, "w", encoding="utf-8") as f:
+            for msg in st.session_state.messages:
+                f.write(f"{msg['role'].capitalize()}: {msg['content']}\n\n")
+        return filename
 
-# ✅ [분석 기능] 사용자 입력 메시지 유형 분류 함수
-def classify_issue(text):
-    categories = {
-        "안전 문제": ["사고", "위험", "안전", "보호구", "경고"],
-        "장비 문제": ["장비", "기계", "작동", "오류", "점검"],
-        "작업 절차 문제": ["절차", "규정", "허가", "승인", "검토"],
-        "환경 문제": ["소음", "먼지", "환경", "배출", "폐기물"],
-        "기타": []  # 미분류 항목
-    }
-    
-    for category, keywords in categories.items():
-        if any(keyword in text for keyword in keywords):
-            return category
-    return "기타"
+    filename = save_chat_to_file()
 
-# ✅ [분석 기능] 사용자의 입력만 추출하여 분류 및 통계 생성
-def analyze_issues():
-    user_messages = [msg["content"] for msg in st.session_state.messages if msg["role"] == "user"]
-    issue_counts = Counter(classify_issue(msg) for msg in user_messages)
-    return issue_counts
-
-
-# ✅ [분석 버튼] 누르면 통계를 화면에 표시
-if st.button("🔍 문제 분석하기"):
-    issue_stats = analyze_issues()
-
-    st.subheader("📊 문제 분석 결과")
-    for category, count in issue_stats.items():
-        st.write(f"- **{category}**: {count}건")
-
-    # 차트 표시
-    st.bar_chart(issue_stats)
+    # 파일 다운로드 버튼 제공
+    with open(filename, "rb") as f:
+        st.download_button(
+            label="채팅 내용 다운로드",
+            data=f,
+            file_name=filename,
+            mime="text/plain"
+        )
